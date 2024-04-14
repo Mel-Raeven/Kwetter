@@ -18,7 +18,8 @@ jobs:
         go-version: '1.22'
 
     - name: Build
-      run: cd services/messages && go build -v cmd
+      run: cd services/messages && go build cmd
 
-    - name: Test
-      run: cd services/messages && go test -v tests
+# Uncomment when i start implementing tests
+#    - name: Test
+#      run: cd services/messages && go test -v tests
