@@ -16,6 +16,26 @@ Resources:
       Runtime: provided.al2
       Architectures:
       - arm64
+      Policies:
+      - DynamoDBReadPolicy:
+          TableName:
+            Ref: KwetterMessagesDynamoDBTable
+      - DynamoDBWritePolicy:
+          TableName:
+            Ref: KwetterMessagesDynamoDBTable
+  KwetterMessagesDynamoDBTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: KwetterTable
+      AttributeDefinitions:
+      - AttributeName: MessageId
+        AttributeType: S
+      KeySchema:
+      - AttributeName: MessageId
+        KeyType: HASH
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
   KwetterAPIGateway:
     Type: AWS::Serverless::Api
     Properties:
@@ -82,7 +102,7 @@ Resources:
       - phone
       - email
       - openid
-  KwetterAPIGatewayPermissionGetBookings:
+  KwetterAPIGatewayPermissionTestFunction:
     Type: AWS::Lambda::Permission
     Properties:
       Action: lambda:InvokeFunction
