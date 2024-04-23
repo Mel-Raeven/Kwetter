@@ -1,16 +1,104 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: 'AWS::Serverless-2016-10-31'
 Resources:
-  CustomEventBus: 
+  KwetterEventBus: 
     Type: AWS::Events::EventBus
     Properties: 
-        Name: "CustomEventBus"
-  NameTestFunction:
+      Name: "KwetterEventBus"
+
+  TestFunction:
     Type: AWS::Serverless::Function
     Metadata:
       BuildMethod: go1.x
     Properties:
-      CodeUri: booking/cmd/ # folder where your main program resides
+      CodeUri: messages/lambda/ # folder where your main program resides
       Handler: bootstrap
-      Runtime: provided.al2023
+      Runtime: provided.al2
       Architectures: [arm64]
+
+  KwetterAPIGateway:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: Prod
+      Cors: "'*'"
+      DefinitionBody:
+        swagger: "2.0"
+        info:
+          title: "KwetterAPIGateway"
+        paths:
+            /postMessage:
+              post:
+                consumes:
+                  - application/json
+                produces:
+                  - application/json
+                parameters: []
+                responses: {}
+                x-amazon-apigateway-integration:
+                  type: aws
+                  httpMethod: POST
+                  uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${TestFunction.Arn}/invocations"
+
+  KwetterUserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: "KwetterUserPool"
+      Policies:
+        PasswordPolicy:
+          RequireLowercase: true
+          RequireSymbols: false
+          RequireNumbers: true
+          MinimumLength: "8"
+          RequireUppercase: true
+      UsernameAttributes:
+        - email
+      Schema:
+        - AttributeDataType: String
+          Name: email
+          Required: false
+      AutoVerifiedAttributes:
+        - email
+
+  KwetterUserpoolDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      UserPoolId: !Ref KwetterUserPool
+      Domain: "kwetter"
+
+  KwetterUserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      UserPoolId: !Ref KwetterUserPool
+      ClientName: "KwetterUserPoolClient"
+      GenerateSecret: false
+      AllowedOAuthFlowsUserPoolClient: True
+      AllowedOAuthFlows: 
+        - code
+      CallbackURLs: 
+        - "https://localhost:8000"
+      SupportedIdentityProviders:
+        - COGNITO 
+      AllowedOAuthScopes:
+        - phone
+        - email
+        - openid
+
+  KwetterAPIGatewayPermissionGetBookings:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt TestFunction.Arn
+      Principal: apigateway.amazonaws.com
+
+  KwetterEventRule:
+    Type: AWS::Events::Rule
+    Properties:
+      EventBusName: !Ref KwetterEventBus
+      EventPattern:
+        source:
+          - "api.gateway"
+        detail-type:
+          - "API Gateway Request"
+      Targets:
+        - Arn: !GetAtt TestFunction.Arn
+          Id: "InvokeTestFunction"
