@@ -11,15 +11,88 @@ Resources:
     Metadata:
       BuildMethod: go1.x
     Properties:
-      CodeUri: messages/lambda/ # folder where your main program resides
+      CodeUri: messages/lambda/messageCRUD/ # folder where your main program resides
       Handler: bootstrap
       Runtime: provided.al2
       Architectures: [arm64]
+      Role: !GetAtt TestFunctionExecutionRole.Arn
+
+  TestFunctionExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
       Policies:
-        - DynamoDBReadPolicy:
-            TableName: !Ref KwetterMessagesDynamoDBTable
-        - DynamoDBWritePolicy:
-            TableName: !Ref KwetterMessagesDynamoDBTable
+        - PolicyName: LambdaLoggingPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: arn:aws:logs:*:*:*
+        - PolicyName: EventBridgePutEventsPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: events:PutEvents
+                Resource: !GetAtt KwetterEventBus.Arn
+        - PolicyName: DynamoDBReadPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: dynamodb:GetItem
+                Resource: !GetAtt KwetterMessagesDynamoDBTable.Arn # Replace with your DynamoDB table resource ARN
+        - PolicyName: DynamoDBWritePolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: dynamodb:PutItem
+                Resource: !GetAtt KwetterMessagesDynamoDBTable.Arn # Replace with your DynamoDB table resource ARN
+
+  TestFunctionTarget:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      CodeUri: messages/lambda/messageTarget/ # folder where your main program resides
+      Handler: bootstrap
+      Runtime: provided.al2
+      Architectures: [arm64]
+      Role: !GetAtt TestFunctionTargetRole.Arn
+
+  TestFunctionTargetRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: LambdaLoggingPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: arn:aws:logs:*:*:*
+
 
   KwetterMessagesDynamoDBTable:
     Type: AWS::DynamoDB::Table
@@ -121,3 +194,16 @@ Resources:
       Targets:
         - Arn: !GetAtt TestFunction.Arn
           Id: "InvokeTestFunction"
+  
+  MyEventRule:
+    Type: AWS::Events::Rule
+    Properties:
+      EventBusName: !Ref KwetterEventBus # Replace with your event bus name
+      EventPattern:
+        source:
+          - "com.example.kwetter" # Replace with your source name
+        detail-type:
+          - "MessageCreation" # Replace with your detail type
+      Targets:
+        - Arn: !GetAtt TestFunctionTarget.Arn # Specify the ARN of your target (e.g., another Lambda function, SQS queue, SNS topic, etc.)
+          Id: "InvokeTarget"
