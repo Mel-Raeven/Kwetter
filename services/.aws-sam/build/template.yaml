@@ -1,0 +1,229 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Resources:
+  KwetterEventBus:
+    Type: AWS::Events::EventBus
+    Properties:
+      Name: KwetterEventBus
+  TestFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+      SamResourceId: TestFunction
+    Properties:
+      CodeUri: TestFunction
+      Handler: bootstrap
+      Runtime: provided.al2
+      Architectures:
+      - arm64
+      Role:
+        Fn::GetAtt:
+        - TestFunctionExecutionRole
+        - Arn
+  TestFunctionExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: lambda.amazonaws.com
+          Action: sts:AssumeRole
+      Policies:
+      - PolicyName: LambdaLoggingPolicy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            Resource: arn:aws:logs:*:*:*
+      - PolicyName: EventBridgePutEventsPolicy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action: events:PutEvents
+            Resource:
+              Fn::GetAtt:
+              - KwetterEventBus
+              - Arn
+      - PolicyName: DynamoDBReadPolicy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action: dynamodb:GetItem
+            Resource:
+              Fn::GetAtt:
+              - KwetterMessagesDynamoDBTable
+              - Arn
+      - PolicyName: DynamoDBWritePolicy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action: dynamodb:PutItem
+            Resource:
+              Fn::GetAtt:
+              - KwetterMessagesDynamoDBTable
+              - Arn
+  TestFunctionTarget:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+      SamResourceId: TestFunctionTarget
+    Properties:
+      CodeUri: TestFunctionTarget
+      Handler: bootstrap
+      Runtime: provided.al2
+      Architectures:
+      - arm64
+      Role:
+        Fn::GetAtt:
+        - TestFunctionTargetRole
+        - Arn
+  TestFunctionTargetRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: lambda.amazonaws.com
+          Action: sts:AssumeRole
+      Policies:
+      - PolicyName: LambdaLoggingPolicy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            Resource: arn:aws:logs:*:*:*
+  KwetterMessagesDynamoDBTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: KwetterTable
+      AttributeDefinitions:
+      - AttributeName: MessageId
+        AttributeType: S
+      KeySchema:
+      - AttributeName: MessageId
+        KeyType: HASH
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+  KwetterAPIGateway:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: Prod
+      Cors: '''*'''
+      DefinitionBody:
+        swagger: '2.0'
+        info:
+          title: KwetterAPIGateway
+        paths:
+          /postMessage:
+            post:
+              consumes:
+              - application/json
+              produces:
+              - application/json
+              parameters: []
+              responses: {}
+              x-amazon-apigateway-integration:
+                type: aws
+                httpMethod: POST
+                uri:
+                  Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${TestFunction.Arn}/invocations
+  KwetterUserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: KwetterUserPool
+      Policies:
+        PasswordPolicy:
+          RequireLowercase: true
+          RequireSymbols: false
+          RequireNumbers: true
+          MinimumLength: '8'
+          RequireUppercase: true
+      UsernameAttributes:
+      - email
+      Schema:
+      - AttributeDataType: String
+        Name: email
+        Required: false
+      AutoVerifiedAttributes:
+      - email
+  KwetterUserpoolDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      UserPoolId:
+        Ref: KwetterUserPool
+      Domain: kwetter
+  KwetterUserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      UserPoolId:
+        Ref: KwetterUserPool
+      ClientName: KwetterUserPoolClient
+      GenerateSecret: false
+      AllowedOAuthFlowsUserPoolClient: true
+      AllowedOAuthFlows:
+      - code
+      CallbackURLs:
+      - https://localhost:8000
+      SupportedIdentityProviders:
+      - COGNITO
+      AllowedOAuthScopes:
+      - phone
+      - email
+      - openid
+  KwetterAPIGatewayPermissionTestFunction:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName:
+        Fn::GetAtt:
+        - TestFunction
+        - Arn
+      Principal: apigateway.amazonaws.com
+  KwetterEventRule:
+    Type: AWS::Events::Rule
+    Properties:
+      EventBusName:
+        Ref: KwetterEventBus
+      EventPattern:
+        source:
+        - api.gateway
+        detail-type:
+        - API Gateway Request
+      Targets:
+      - Arn:
+          Fn::GetAtt:
+          - TestFunction
+          - Arn
+        Id: InvokeTestFunction
+  MyEventRule:
+    Type: AWS::Events::Rule
+    Properties:
+      EventBusName:
+        Ref: KwetterEventBus
+      EventPattern:
+        source:
+        - com.example.kwetter
+        detail-type:
+        - MessageCreation
+      Targets:
+      - Arn:
+          Fn::GetAtt:
+          - TestFunctionTarget
+          - Arn
+        Id: InvokeTarget
