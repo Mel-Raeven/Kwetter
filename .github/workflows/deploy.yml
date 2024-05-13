@@ -11,15 +11,21 @@ jobs:
 
     steps:
       - name: Checkout repository
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v3
-      - uses: aws-actions/setup-sam@v2
-      - uses: aws-actions/configure-aws-credentials@v1
+        uses: actions/checkout@v3
+      - name: setup python
+        uses: actions/setup-python@v3
+      - name: setup aws sam  
+        uses: aws-actions/setup-sam@v2
+      - name: configure aws credentials
+        uses: aws-actions/configure-aws-credentials@v1
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: eu-central-1
-      - run: cd services/
-      - run: sam build --use-container
-      - run: sam deploy --no-confirm-changeset --no-fail-on-empty-changeset
+      - name: go to directory
+        run: cd services/
+      - name: build template file
+        run: sam build --use-container
+      - name: deploy to aws stack
+        run: sam deploy --region eu-central-1 --stack-name Kwetter --on-failure ROLLBACK  --no-confirm-changeset --no-fail-on-empty-changeset
       
