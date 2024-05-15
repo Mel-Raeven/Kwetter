@@ -24,10 +24,10 @@ func HandleRequest(ctx context.Context, event *MyEvent) (*string, error) {
 	eventInput := &eventbridge.PutEventsInput{
 		Entries: []*eventbridge.PutEventsRequestEntry{
 			{
-				Detail:       aws.String(string(event.Name)),
+				Source:       aws.String("com.example.kwetter"),
+				Detail:       aws.String(`{"Name": "test"}`),
 				DetailType:   aws.String("MessageCreation"),
 				EventBusName: aws.String("KwetterEventBus"),
-				Source:       aws.String("com.example.kwetter"),
 			},
 		},
 	}

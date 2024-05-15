@@ -132,9 +132,10 @@ Resources:
                   uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${TestFunction.Arn}/invocations"
 
   KwetterUserPool:
-    Type: AWS::Cognito::UserPool
+    Type: AWS::Cognito::UserPool 
     Properties:
       UserPoolName: "KwetterUserPool"
+      DeletionProtection: ACTIVE 
       Policies:
         PasswordPolicy:
           RequireLowercase: true
@@ -200,10 +201,8 @@ Resources:
     Properties:
       EventBusName: !Ref KwetterEventBus # Replace with your event bus name
       EventPattern:
-        source:
-          - "com.example.kwetter" # Replace with your source name
         detail-type:
           - "MessageCreation" # Replace with your detail type
       Targets:
-        - Arn: !GetAtt TestFunctionTarget.Arn # Specify the ARN of your target (e.g., another Lambda function, SQS queue, SNS topic, etc.)
-          Id: "InvokeTarget"
+        - Arn: !GetAtt TestFunctionTarget.Arn
+          Id: "TestFunctionTarget"

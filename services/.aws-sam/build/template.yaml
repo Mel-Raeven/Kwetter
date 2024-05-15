@@ -147,6 +147,7 @@ Resources:
     Type: AWS::Cognito::UserPool
     Properties:
       UserPoolName: KwetterUserPool
+      DeletionProtection: ACTIVE
       Policies:
         PasswordPolicy:
           RequireLowercase: true
@@ -217,8 +218,6 @@ Resources:
       EventBusName:
         Ref: KwetterEventBus
       EventPattern:
-        source:
-        - com.example.kwetter
         detail-type:
         - MessageCreation
       Targets:
@@ -226,4 +225,4 @@ Resources:
           Fn::GetAtt:
           - TestFunctionTarget
           - Arn
-        Id: InvokeTarget
+        Id: TestFunctionTarget
