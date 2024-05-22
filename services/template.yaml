@@ -6,18 +6,56 @@ Resources:
     Properties: 
       Name: "KwetterEventBus"
 
-  TestFunction:
+  KwetterEventBusDLQ:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: "KwetterEventBusDLQ"
+
+  KwetterEventBusDLQPolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref KwetterEventBusDLQ
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: "*"
+            Action: "sqs:SendMessage"
+            Resource: !GetAtt KwetterEventBusDLQ.Arn
+            Condition:
+              ArnEquals:
+                aws:SourceArn: !GetAtt KwetterEventBus.Arn
+
+  KwetterEventBusmessageContentCheckingFunctionDLQRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: "KwetterEventBusmessageContentCheckingFunctionDLQRule"
+      EventBusName: !Ref KwetterEventBus
+      EventPattern:
+        source:
+          - "com.example.kwetter"
+      Targets:
+        - Id: "KwetterEventBusDLQTarget"
+          Arn: !GetAtt KwetterEventBusDLQ.Arn
+          RetryPolicy:
+            MaximumRetryAttempts: 1
+            MaximumEventAgeInSeconds: 60
+          DeadLetterConfig:
+            Arn: !GetAtt KwetterEventBusDLQ.Arn
+
+  messageContentCheckingFunction:
     Type: AWS::Serverless::Function
     Metadata:
       BuildMethod: go1.x
     Properties:
-      CodeUri: messages/lambda/messageCRUD/ # folder where your main program resides
+      CodeUri: messages/lambda/messageContentChecking/
       Handler: bootstrap
       Runtime: provided.al2
       Architectures: [arm64]
-      Role: !GetAtt TestFunctionExecutionRole.Arn
+      Role: !GetAtt messageContentCheckingFunctionRole.Arn
 
-  TestFunctionExecutionRole:
+  messageContentCheckingFunctionRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -60,18 +98,18 @@ Resources:
                 Action: dynamodb:PutItem
                 Resource: !GetAtt KwetterMessagesDynamoDBTable.Arn # Replace with your DynamoDB table resource ARN
 
-  TestFunctionTarget:
+  MessageCRUDFunction:
     Type: AWS::Serverless::Function
     Metadata:
       BuildMethod: go1.x
     Properties:
-      CodeUri: messages/lambda/messageTarget/ # folder where your main program resides
+      CodeUri: messages/lambda/messageCRUD/ # folder where your main program resides
       Handler: bootstrap
       Runtime: provided.al2
       Architectures: [arm64]
-      Role: !GetAtt TestFunctionTargetRole.Arn
+      Role: !GetAtt MessageCRUDFunctionRole.Arn
 
-  TestFunctionTargetRole:
+  MessageCRUDFunctionRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -92,17 +130,30 @@ Resources:
                   - logs:CreateLogStream
                   - logs:PutLogEvents
                 Resource: arn:aws:logs:*:*:*
-
+        - PolicyName: DynamoDBReadPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: dynamodb:GetItem
+                Resource: !GetAtt KwetterMessagesDynamoDBTable.Arn # Replace with your DynamoDB table resource ARN
+        - PolicyName: DynamoDBWritePolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: dynamodb:PutItem
+                Resource: !GetAtt KwetterMessagesDynamoDBTable.Arn # Replace with your DynamoDB table resource ARN
 
   KwetterMessagesDynamoDBTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: "KwetterTable"
+      TableName: "KwetterMessagesDynamoDBTable"
       AttributeDefinitions:
-        - AttributeName: "MessageId"
+        - AttributeName: "GUID"
           AttributeType: "S"
       KeySchema:
-        - AttributeName: "MessageId"
+        - AttributeName: "GUID"
           KeyType: "HASH"
       ProvisionedThroughput:
         ReadCapacityUnits: 5
@@ -129,7 +180,7 @@ Resources:
                 x-amazon-apigateway-integration:
                   type: aws
                   httpMethod: POST
-                  uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${TestFunction.Arn}/invocations"
+                  uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${messageContentCheckingFunction.Arn}/invocations"
 
   KwetterUserPool:
     Type: AWS::Cognito::UserPool 
@@ -180,10 +231,10 @@ Resources:
     Type: AWS::Lambda::Permission
     Properties:
       Action: lambda:InvokeFunction
-      FunctionName: !GetAtt TestFunction.Arn
+      FunctionName: !GetAtt messageContentCheckingFunction.Arn
       Principal: apigateway.amazonaws.com
 
-  KwetterEventRule:
+  APIGatewayEventRule:
     Type: AWS::Events::Rule
     Properties:
       EventBusName: !Ref KwetterEventBus
@@ -193,10 +244,18 @@ Resources:
         detail-type:
           - "API Gateway Request"
       Targets:
-        - Arn: !GetAtt TestFunction.Arn
+        - Arn: !GetAtt messageContentCheckingFunction.Arn
           Id: "InvokeTestFunction"
-  
-  MyEventRule:
+ 
+  EventRulePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt MessageCRUDFunction.Arn
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt messageContentCheckingFunctionEventRule.Arn
+
+  messageContentCheckingFunctionEventRule:
     Type: AWS::Events::Rule
     Properties:
       EventBusName: !Ref KwetterEventBus # Replace with your event bus name
@@ -204,5 +263,10 @@ Resources:
         detail-type:
           - "MessageCreation" # Replace with your detail type
       Targets:
-        - Arn: !GetAtt TestFunctionTarget.Arn
-          Id: "TestFunctionTarget"
+        - Arn: !GetAtt MessageCRUDFunction.Arn
+          Id: "MessageCRUDFunction"
+          RetryPolicy:
+            MaximumRetryAttempts: 1
+            MaximumEventAgeInSeconds: 60
+          DeadLetterConfig:
+            Arn: !GetAtt KwetterEventBusDLQ.Arn

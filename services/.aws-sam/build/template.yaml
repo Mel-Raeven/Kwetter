@@ -5,22 +5,70 @@ Resources:
     Type: AWS::Events::EventBus
     Properties:
       Name: KwetterEventBus
-  TestFunction:
+  KwetterEventBusDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: KwetterEventBusDLQ
+  KwetterEventBusDLQPolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+      - Ref: KwetterEventBusDLQ
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal: '*'
+          Action: sqs:SendMessage
+          Resource:
+            Fn::GetAtt:
+            - KwetterEventBusDLQ
+            - Arn
+          Condition:
+            ArnEquals:
+              aws:SourceArn:
+                Fn::GetAtt:
+                - KwetterEventBus
+                - Arn
+  KwetterEventBusmessageContentCheckingFunctionDLQRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: KwetterEventBusmessageContentCheckingFunctionDLQRule
+      EventBusName:
+        Ref: KwetterEventBus
+      EventPattern:
+        source:
+        - com.example.kwetter
+      Targets:
+      - Id: KwetterEventBusDLQTarget
+        Arn:
+          Fn::GetAtt:
+          - KwetterEventBusDLQ
+          - Arn
+        RetryPolicy:
+          MaximumRetryAttempts: 1
+          MaximumEventAgeInSeconds: 60
+        DeadLetterConfig:
+          Arn:
+            Fn::GetAtt:
+            - KwetterEventBusDLQ
+            - Arn
+  messageContentCheckingFunction:
     Type: AWS::Serverless::Function
     Metadata:
       BuildMethod: go1.x
-      SamResourceId: TestFunction
+      SamResourceId: messageContentCheckingFunction
     Properties:
-      CodeUri: TestFunction
+      CodeUri: messageContentCheckingFunction
       Handler: bootstrap
       Runtime: provided.al2
       Architectures:
       - arm64
       Role:
         Fn::GetAtt:
-        - TestFunctionExecutionRole
+        - messageContentCheckingFunctionRole
         - Arn
-  TestFunctionExecutionRole:
+  messageContentCheckingFunctionRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -71,22 +119,22 @@ Resources:
               Fn::GetAtt:
               - KwetterMessagesDynamoDBTable
               - Arn
-  TestFunctionTarget:
+  MessageCRUDFunction:
     Type: AWS::Serverless::Function
     Metadata:
       BuildMethod: go1.x
-      SamResourceId: TestFunctionTarget
+      SamResourceId: MessageCRUDFunction
     Properties:
-      CodeUri: TestFunctionTarget
+      CodeUri: MessageCRUDFunction
       Handler: bootstrap
       Runtime: provided.al2
       Architectures:
       - arm64
       Role:
         Fn::GetAtt:
-        - TestFunctionTargetRole
+        - MessageCRUDFunctionRole
         - Arn
-  TestFunctionTargetRole:
+  MessageCRUDFunctionRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -107,15 +155,35 @@ Resources:
             - logs:CreateLogStream
             - logs:PutLogEvents
             Resource: arn:aws:logs:*:*:*
+      - PolicyName: DynamoDBReadPolicy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action: dynamodb:GetItem
+            Resource:
+              Fn::GetAtt:
+              - KwetterMessagesDynamoDBTable
+              - Arn
+      - PolicyName: DynamoDBWritePolicy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action: dynamodb:PutItem
+            Resource:
+              Fn::GetAtt:
+              - KwetterMessagesDynamoDBTable
+              - Arn
   KwetterMessagesDynamoDBTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: KwetterTable
+      TableName: KwetterMessagesDynamoDBTable
       AttributeDefinitions:
-      - AttributeName: MessageId
+      - AttributeName: GUID
         AttributeType: S
       KeySchema:
-      - AttributeName: MessageId
+      - AttributeName: GUID
         KeyType: HASH
       ProvisionedThroughput:
         ReadCapacityUnits: 5
@@ -142,7 +210,7 @@ Resources:
                 type: aws
                 httpMethod: POST
                 uri:
-                  Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${TestFunction.Arn}/invocations
+                  Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${messageContentCheckingFunction.Arn}/invocations
   KwetterUserPool:
     Type: AWS::Cognito::UserPool
     Properties:
@@ -193,10 +261,10 @@ Resources:
       Action: lambda:InvokeFunction
       FunctionName:
         Fn::GetAtt:
-        - TestFunction
+        - messageContentCheckingFunction
         - Arn
       Principal: apigateway.amazonaws.com
-  KwetterEventRule:
+  APIGatewayEventRule:
     Type: AWS::Events::Rule
     Properties:
       EventBusName:
@@ -209,10 +277,23 @@ Resources:
       Targets:
       - Arn:
           Fn::GetAtt:
-          - TestFunction
+          - messageContentCheckingFunction
           - Arn
         Id: InvokeTestFunction
-  MyEventRule:
+  EventRulePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName:
+        Fn::GetAtt:
+        - MessageCRUDFunction
+        - Arn
+      Principal: events.amazonaws.com
+      SourceArn:
+        Fn::GetAtt:
+        - messageContentCheckingFunctionEventRule
+        - Arn
+  messageContentCheckingFunctionEventRule:
     Type: AWS::Events::Rule
     Properties:
       EventBusName:
@@ -223,6 +304,14 @@ Resources:
       Targets:
       - Arn:
           Fn::GetAtt:
-          - TestFunctionTarget
+          - MessageCRUDFunction
           - Arn
-        Id: TestFunctionTarget
+        Id: MessageCRUDFunction
+        RetryPolicy:
+          MaximumRetryAttempts: 1
+          MaximumEventAgeInSeconds: 60
+        DeadLetterConfig:
+          Arn:
+            Fn::GetAtt:
+            - KwetterEventBusDLQ
+            - Arn
