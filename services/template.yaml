@@ -219,7 +219,9 @@ Resources:
       AllowedOAuthFlows: 
         - code
       CallbackURLs: 
-        - "https://localhost:8000"
+        - "http://localhost:5173/auth/callback"
+      LogoutURLs:
+        - "http://localhost:5173/"
       SupportedIdentityProviders:
         - COGNITO 
       AllowedOAuthScopes:
