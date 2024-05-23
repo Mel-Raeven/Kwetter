@@ -193,6 +193,14 @@ Resources:
     Properties:
       StageName: Prod
       Cors: '''*'''
+      Auth:
+        DefaultAuthorizer: CognitoAuthorizer
+        Authorizers:
+          CognitoAuthorizer:
+            UserPoolArn:
+              Fn::Sub: arn:aws:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${KwetterUserPool}
+            Identity:
+              Header: Authorization
       DefinitionBody:
         swagger: '2.0'
         info:
@@ -247,6 +255,11 @@ Resources:
       AllowedOAuthFlowsUserPoolClient: true
       AllowedOAuthFlows:
       - code
+      - implicit
+      ExplicitAuthFlows:
+      - ALLOW_USER_PASSWORD_AUTH
+      - ALLOW_REFRESH_TOKEN_AUTH
+      - ALLOW_USER_SRP_AUTH
       CallbackURLs:
       - http://localhost:5173/auth/callback
       LogoutURLs:
@@ -257,6 +270,7 @@ Resources:
       - phone
       - email
       - openid
+      - profile
   KwetterAPIGatewayPermissionTestFunction:
     Type: AWS::Lambda::Permission
     Properties:
