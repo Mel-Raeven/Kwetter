@@ -25,4 +25,16 @@ functions = ["messageContentCheckingFunction"]
 [function_build_definitions.002f1b32-b246-4289-ab4d-99b8a5a67977.metadata]
 BuildMethod = "go1.x"
 
+[function_build_definitions.1343a72b-d589-4b49-b3c2-f4f4f6490bac]
+codeuri = "/home/anon/Repos/Kwetter/services/auth/lambda/LambdaAuthorizer"
+runtime = "provided.al2"
+architecture = "arm64"
+handler = "bootstrap"
+manifest_hash = ""
+packagetype = "Zip"
+functions = ["LambdaAuthorizerFunction"]
+
+[function_build_definitions.1343a72b-d589-4b49-b3c2-f4f4f6490bac.metadata]
+BuildMethod = "go1.x"
+
 [layer_build_definitions]

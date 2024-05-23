@@ -42,9 +42,8 @@ const AuthCallback: React.FC = () => {
       const data = await response.json();
       console.log('Fetched token data:', data);
 
-      localStorage.setItem('access_token', data.access_token);
-      localStorage.setItem('id_token', data.id_token);
-      localStorage.setItem('refresh_token', data.refresh_token);
+      sessionStorage.setItem('access_token', data.access_token);
+      sessionStorage.setItem('id_token', data.id_token);
     } catch (error) {
       console.error('Error during fetchTokens:', error);
     }

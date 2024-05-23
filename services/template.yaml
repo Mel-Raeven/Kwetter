@@ -144,6 +144,73 @@ Resources:
               - Effect: Allow
                 Action: dynamodb:PutItem
                 Resource: !GetAtt KwetterMessagesDynamoDBTable.Arn # Replace with your DynamoDB table resource ARN
+  
+  AuthCallbackFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      CodeUri: auth/lambda/AuthCallback/ # folder where your main program resides
+      Handler: bootstrap
+      Runtime: provided.al2
+      Architectures: [arm64]
+      Role: !GetAtt AuthCallbackFunctionExecutionRole.Arn
+
+  LambdaAuthorizerFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      CodeUri: auth/lambda/LambdaAuthorizer/ # folder where your main program resides
+      Handler: bootstrap
+      Runtime: provided.al2
+      Architectures: [arm64]
+      Role: !GetAtt LambdaAuthorizerExecutionRole.Arn
+  
+  LambdaAuthorizerExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service: "lambda.amazonaws.com"
+            Action: "sts:AssumeRole"
+      Policies:
+        - PolicyName: "CognitoLambdaPolicy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Action:
+                  - "logs:CreateLogGroup"
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                  - "cognito-idp:GetUser"
+                Resource: "*"
+  
+  AuthCallbackFunctionExecutionRole:
+    Type: AWS::IAM::Role
+    Properties: 
+      AssumeRolePolicyDocument: 
+        Version: "2012-10-17"
+        Statement: 
+          - Effect: "Allow"
+            Principal: 
+              Service: "lambda.amazonaws.com"
+            Action: "sts:AssumeRole"
+      Policies: 
+        - PolicyName: "PreTokenGenerationLambdaPolicy"
+          PolicyDocument: 
+            Version: "2012-10-17"
+            Statement: 
+              - Effect: "Allow"
+                Action: 
+                  - "logs:CreateLogGroup"
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                Resource: "*"
 
   KwetterMessagesDynamoDBTable:
     Type: AWS::DynamoDB::Table
@@ -181,12 +248,24 @@ Resources:
                   type: aws
                   httpMethod: POST
                   uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${messageContentCheckingFunction.Arn}/invocations"
-
+  
+  ApiGatewayAuthorizer:
+    Type: AWS::ApiGateway::Authorizer
+    Properties:
+      Name: CognitoLambdaAuthorizer
+      Type: TOKEN
+      IdentitySource: method.request.header.Cookie
+      AuthorizerUri: !Sub 
+        "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LambdaAuthorizerFunction.Arn}/invocations"
+      RestApiId: !Ref KwetterAPIGateway 
+  
   KwetterUserPool:
     Type: AWS::Cognito::UserPool 
     Properties:
       UserPoolName: "KwetterUserPool"
-      DeletionProtection: ACTIVE 
+      DeletionProtection: ACTIVE
+      LambdaConfig:
+        PreTokenGeneration: !GetAtt AuthCallbackFunction.Arn
       Policies:
         PasswordPolicy:
           RequireLowercase: true
@@ -202,6 +281,14 @@ Resources:
           Required: false
       AutoVerifiedAttributes:
         - email
+
+  AuthCallbackInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref AuthCallbackFunction 
+      Action: lambda:InvokeFunction
+      Principal: cognito-idp.amazonaws.com
+      SourceArn: !GetAtt KwetterUserPool.Arn
 
   KwetterUserpoolDomain:
     Type: AWS::Cognito::UserPoolDomain

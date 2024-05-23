@@ -2,9 +2,8 @@ import React from 'react';
 
 const LogoutButton: React.FC = () => {
   // Clear local storage
-  localStorage.removeItem('access_token');
-  localStorage.removeItem('id_token');
-  localStorage.removeItem('refresh_token');
+  sessionStorage.removeItem('access_token');
+  sessionStorage.removeItem('id_token');
 
   // Clear HTTP-only cookies
   document.cookie = 'accessToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';

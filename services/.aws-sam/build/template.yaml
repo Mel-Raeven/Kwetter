@@ -175,6 +175,64 @@ Resources:
               Fn::GetAtt:
               - KwetterMessagesDynamoDBTable
               - Arn
+  LambdaAuthorizerFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+      SamResourceId: LambdaAuthorizerFunction
+    Properties:
+      CodeUri: LambdaAuthorizerFunction
+      Handler: bootstrap
+      Runtime: provided.al2
+      Architectures:
+      - arm64
+      Role:
+        Fn::GetAtt:
+        - LambdaAuthorizerExecutionRole
+        - Arn
+  LambdaAuthorizerExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: lambda.amazonaws.com
+          Action: sts:AssumeRole
+      Policies:
+      - PolicyName: CognitoLambdaPolicy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            - cognito-idp:GetUser
+            Resource: '*'
+  AuthCallbackFunctionExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: lambda.amazonaws.com
+          Action: sts:AssumeRole
+      Policies:
+      - PolicyName: PreTokenGenerationLambdaPolicy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            Resource: '*'
   KwetterMessagesDynamoDBTable:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -211,6 +269,16 @@ Resources:
                 httpMethod: POST
                 uri:
                   Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${messageContentCheckingFunction.Arn}/invocations
+  ApiGatewayAuthorizer:
+    Type: AWS::ApiGateway::Authorizer
+    Properties:
+      Name: CognitoLambdaAuthorizer
+      Type: TOKEN
+      IdentitySource: method.request.header.Cookie
+      AuthorizerUri:
+        Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LambdaAuthorizerFunction.Arn}/invocations
+      RestApiId:
+        Ref: KwetterAPIGateway
   KwetterUserPool:
     Type: AWS::Cognito::UserPool
     Properties:
@@ -231,6 +299,17 @@ Resources:
         Required: false
       AutoVerifiedAttributes:
       - email
+  AuthCallbackInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName:
+        Ref: AuthCallbackFunction
+      Action: lambda:InvokeFunction
+      Principal: cognito-idp.amazonaws.com
+      SourceArn:
+        Fn::GetAtt:
+        - KwetterUserPool
+        - Arn
   KwetterUserpoolDomain:
     Type: AWS::Cognito::UserPoolDomain
     Properties:
