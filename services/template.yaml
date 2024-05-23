@@ -83,33 +83,19 @@ Resources:
               - Effect: Allow
                 Action: events:PutEvents
                 Resource: !GetAtt KwetterEventBus.Arn
-        - PolicyName: DynamoDBReadPolicy
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action: dynamodb:GetItem
-                Resource: !GetAtt KwetterMessagesDynamoDBTable.Arn # Replace with your DynamoDB table resource ARN
-        - PolicyName: DynamoDBWritePolicy
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action: dynamodb:PutItem
-                Resource: !GetAtt KwetterMessagesDynamoDBTable.Arn # Replace with your DynamoDB table resource ARN
 
-  MessageCRUDFunction:
+  MessageCreateFunction:
     Type: AWS::Serverless::Function
     Metadata:
       BuildMethod: go1.x
     Properties:
-      CodeUri: messages/lambda/messageCRUD/ # folder where your main program resides
+      CodeUri: messages/lambda/messageCreate/
       Handler: bootstrap
       Runtime: provided.al2
       Architectures: [arm64]
-      Role: !GetAtt MessageCRUDFunctionRole.Arn
+      Role: !GetAtt MessageCreateFunctionRole.Arn
 
-  MessageCRUDFunctionRole:
+  MessageCreateFunctionRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -130,20 +116,51 @@ Resources:
                   - logs:CreateLogStream
                   - logs:PutLogEvents
                 Resource: arn:aws:logs:*:*:*
-        - PolicyName: DynamoDBReadPolicy
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action: dynamodb:GetItem
-                Resource: !GetAtt KwetterMessagesDynamoDBTable.Arn # Replace with your DynamoDB table resource ARN
         - PolicyName: DynamoDBWritePolicy
           PolicyDocument:
             Version: '2012-10-17'
             Statement:
               - Effect: Allow
                 Action: dynamodb:PutItem
-                Resource: !GetAtt KwetterMessagesDynamoDBTable.Arn # Replace with your DynamoDB table resource ARN
+                Resource: !GetAtt KwetterMessagesDynamoDBTable.Arn
+
+  MessageReadFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      CodeUri: messages/lambda/messageRead/
+      Handler: bootstrap
+      Runtime: provided.al2
+      Architectures: [arm64]
+      Role: !GetAtt MessageReadFunctionRole.Arn
+
+  MessageReadFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: 'LambdaDynamoDBPolicy'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Action:
+                  - 'logs:CreateLogGroup'
+                  - 'logs:CreateLogStream'
+                  - 'logs:PutLogEvents'
+                Resource: 'arn:aws:logs:*:*:*'
+              - Effect: 'Allow'
+                Action:
+                  - 'dynamodb:Scan'
+                Resource: 
+                  - !GetAtt KwetterMessagesDynamoDBTable.Arn
 
   KwetterMessagesDynamoDBTable:
     Type: AWS::DynamoDB::Table
@@ -198,7 +215,47 @@ Resources:
                       statusCode: '400'
                     5xx:
                       statusCode: '500'
- 
+            /getMessages/{userid}:
+              get:
+                consumes:
+                  - application/json
+                produces:
+                  - application/json
+                parameters:
+                  - name: userid
+                    in: path
+                    required: true
+                    type: string
+                responses:
+                  '200':
+                    description: "200 response"
+                x-amazon-apigateway-integration:
+                  type: aws_proxy
+                  httpMethod: GET
+                  uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${MessageReadFunction.Arn}/invocations"
+                  passthroughBehavior: WHEN_NO_MATCH
+                  responses:
+                    default:
+                      statusCode: '200'
+                    4xx:
+                      statusCode: '400'
+                    5xx:
+                      statusCode: '500'
+                  requestParameters:
+                    integration.request.path.userid: method.request.path.userid
+                  messageContentCheckingFunction
+  
+  OptionsMethodAuthorization:
+    Type: AWS::ApiGateway::GatewayResponse
+    Properties:
+      ResponseParameters:
+        gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+        gatewayresponse.header.Access-Control-Allow-Methods: "'POST,OPTIONS'"
+        gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+      ResponseType: DEFAULT_4XX
+      RestApiId: !Ref KwetterAPIGateway
+      StatusCode: 200
+  
   KwetterUserPool:
     Type: AWS::Cognito::UserPool 
     Properties:
@@ -252,14 +309,21 @@ Resources:
         - openid
         - profile
 
-  KwetterAPIGatewayPermissionTestFunction:
+  KwetterAPIGatewayPermissionMessageContentCheckingFunction:
     Type: AWS::Lambda::Permission
     Properties:
       Action: lambda:InvokeFunction
       FunctionName: !GetAtt messageContentCheckingFunction.Arn
       Principal: apigateway.amazonaws.com
-
-  APIGatewayEventRule:
+  
+  KwetterAPIGatewayPermissionMessageReadFunction:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt MessageReadFunction.Arn
+      Principal: apigateway.amazonaws.com
+  
+  APIGatewayMessageContentEventRule:
     Type: AWS::Events::Rule
     Properties:
       EventBusName: !Ref KwetterEventBus
@@ -271,12 +335,25 @@ Resources:
       Targets:
         - Arn: !GetAtt messageContentCheckingFunction.Arn
           Id: "InvokeTestFunction"
- 
+  
+  APIGatewayMessageReadEventRule:
+    Type: AWS::Events::Rule
+    Properties:
+      EventBusName: !Ref KwetterEventBus
+      EventPattern:
+        source:
+          - "api.gateway"
+        detail-type:
+          - "API Gateway Request"
+      Targets:
+        - Arn: !GetAtt MessageReadFunction.Arn
+          Id: "InvokeMessageReadFunction"
+
   EventRulePermission:
     Type: AWS::Lambda::Permission
     Properties:
       Action: lambda:InvokeFunction
-      FunctionName: !GetAtt MessageCRUDFunction.Arn
+      FunctionName: !GetAtt MessageCreateFunction.Arn
       Principal: events.amazonaws.com
       SourceArn: !GetAtt messageContentCheckingFunctionEventRule.Arn
 
@@ -288,8 +365,8 @@ Resources:
         detail-type:
           - "MessageCreation" # Replace with your detail type
       Targets:
-        - Arn: !GetAtt MessageCRUDFunction.Arn
-          Id: "MessageCRUDFunction"
+        - Arn: !GetAtt MessageCreateFunction.Arn
+          Id: "MessageCreateFunction"
           RetryPolicy:
             MaximumRetryAttempts: 1
             MaximumEventAgeInSeconds: 60

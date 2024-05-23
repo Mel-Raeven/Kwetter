@@ -13,7 +13,7 @@ import (
 
 type Detail struct {
 	Message string `json:"Message"`
-	UserID  int    `json:"UserID"`
+	UserID  string `json:"UserID"`
 }
 
 type Event struct {
