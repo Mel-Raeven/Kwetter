@@ -213,12 +213,22 @@ Resources:
               produces:
               - application/json
               parameters: []
-              responses: {}
+              responses:
+                '200':
+                  description: 200 response
               x-amazon-apigateway-integration:
                 type: aws
                 httpMethod: POST
                 uri:
                   Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${messageContentCheckingFunction.Arn}/invocations
+                passthroughBehavior: WHEN_NO_MATCH
+                responses:
+                  default:
+                    statusCode: '200'
+                  4xx:
+                    statusCode: '400'
+                  5xx:
+                    statusCode: '500'
   KwetterUserPool:
     Type: AWS::Cognito::UserPool
     Properties:
@@ -331,3 +341,16 @@ Resources:
             Fn::GetAtt:
             - KwetterEventBusDLQ
             - Arn
+  LambdaDashboard:
+    Type: AWS::CloudWatch::Dashboard
+    Properties:
+      DashboardName: CustomLambdaDashboard
+      DashboardBody: "{\n  \"widgets\": [\n    {\n      \"type\": \"metric\",\n  \
+        \    \"x\": 0,\n      \"y\": 0,\n      \"width\": 12,\n      \"height\": 6,\n\
+        \      \"properties\": {\n        \"metrics\": [\n          [ \"AWS/Lambda\"\
+        , \"Errors\", { \"label\": \"Errors\", \"id\": \"errors\" } ],\n         \
+        \ [ \".\", \"Invocations\", { \"label\": \"Invocations\", \"id\": \"invocations\"\
+        \ } ],\n          [ \".\", \"Duration\", { \"label\": \"Duration\", \"id\"\
+        : \"duration\" } ]\n        ],\n        \"period\": 300,\n        \"stat\"\
+        : \"Sum\",\n        \"region\": \"eu-central-1\",\n        \"title\": \"Lambda\
+        \ Metrics\"\n      }\n    }\n  ]\n}\n"

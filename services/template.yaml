@@ -183,12 +183,22 @@ Resources:
                 produces:
                   - application/json
                 parameters: []
-                responses: {}
+                responses:
+                  '200':
+                    description: "200 response"
                 x-amazon-apigateway-integration:
                   type: aws
                   httpMethod: POST
                   uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${messageContentCheckingFunction.Arn}/invocations"
-
+                  passthroughBehavior: WHEN_NO_MATCH
+                  responses:
+                    default:
+                      statusCode: '200'
+                    4xx:
+                      statusCode: '400'
+                    5xx:
+                      statusCode: '500'
+ 
   KwetterUserPool:
     Type: AWS::Cognito::UserPool 
     Properties:
@@ -285,3 +295,31 @@ Resources:
             MaximumEventAgeInSeconds: 60
           DeadLetterConfig:
             Arn: !GetAtt KwetterEventBusDLQ.Arn
+
+  KwetterDashboard:
+    Type: AWS::CloudWatch::Dashboard
+    Properties:
+      DashboardName: "KwetterDashboard"
+      DashboardBody: |
+        {
+          "widgets": [
+            {
+              "type": "metric",
+              "x": 0,
+              "y": 0,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "metrics": [
+                  [ "AWS/Lambda", "Errors", { "label": "Errors", "id": "errors" } ],
+                  [ ".", "Invocations", { "label": "Invocations", "id": "invocations" } ],
+                  [ ".", "Duration", { "label": "Duration", "id": "duration" } ]
+                ],
+                "period": 300,
+                "stat": "Sum",
+                "region": "eu-central-1",
+                "title": "Lambda Metrics"
+              }
+            }
+          ]
+        }
