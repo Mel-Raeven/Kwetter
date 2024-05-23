@@ -11,7 +11,7 @@ const AuthCallback: React.FC = () => {
     if (code) {
       fetchTokens(code).then(() => {
         console.log('Tokens fetched and stored successfully');
-        navigate('/'); // Redirect to home page after successful authentication
+        navigate('/dashboard'); // Redirect to home page after successful authentication
       }).catch((error) => {
         console.error('Error fetching tokens:', error);
       });
@@ -40,10 +40,9 @@ const AuthCallback: React.FC = () => {
       }
 
       const data = await response.json();
-      console.log('Fetched token data:', data);
 
-      localStorage.setItem('access_token', data.access_token);
-      localStorage.setItem('id_token', data.id_token);
+      sessionStorage.setItem('access_token', data.access_token);
+      sessionStorage.setItem('id_token', data.id_token);
     } catch (error) {
       console.error('Error during fetchTokens:', error);
     }
