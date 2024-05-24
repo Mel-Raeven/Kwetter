@@ -424,11 +424,47 @@ Resources:
     Properties:
       DashboardName: KwetterDashboard
       DashboardBody: "{\n  \"widgets\": [\n    {\n      \"type\": \"metric\",\n  \
-        \    \"x\": 0,\n      \"y\": 0,\n      \"width\": 12,\n      \"height\": 6,\n\
+        \    \"x\": 0,\n      \"y\": 0,\n      \"width\": 6,\n      \"height\": 6,\n\
         \      \"properties\": {\n        \"metrics\": [\n          [ \"AWS/Lambda\"\
         , \"Errors\", { \"label\": \"Errors\", \"id\": \"errors\" } ],\n         \
         \ [ \".\", \"Invocations\", { \"label\": \"Invocations\", \"id\": \"invocations\"\
         \ } ],\n          [ \".\", \"Duration\", { \"label\": \"Duration\", \"id\"\
         : \"duration\" } ]\n        ],\n        \"period\": 300,\n        \"stat\"\
         : \"Sum\",\n        \"region\": \"eu-central-1\",\n        \"title\": \"Lambda\
-        \ Metrics\"\n      }\n    }\n  ]\n}\n"
+        \ Metrics\"\n      }\n    },\n    {\n      \"type\": \"metric\",\n      \"\
+        x\": 6,\n      \"y\": 0,\n      \"width\": 6,\n      \"height\": 6,\n    \
+        \  \"properties\": {\n        \"metrics\": [\n          [\n            \"\
+        AWS/Cognito\", \n            \"SignInSuccesses\", \n            \"UserPool\"\
+        , \n            \"eu-central-1_sDUO5HFwX\", \n            \"UserPoolClient\"\
+        , \n            \"5vs4anjqtme5f93037vv30fmp0\", \n            { \"label\"\
+        : \"SignInSuccesses\", \"id\": \"signinsuccesses\" }\n          ],\n     \
+        \     [\n            \"AWS/Cognito\", \n            \"SignUpSuccesses\", \n\
+        \            \"UserPool\", \n            \"eu-central-1_sDUO5HFwX\", \n  \
+        \          \"UserPoolClient\", \n            \"5vs4anjqtme5f93037vv30fmp0\"\
+        , \n            { \"label\": \"SignUpSuccesses\", \"id\": \"signupsuccesses\"\
+        \ }\n          ]\n        ],\n        \"period\": 300,\n        \"stat\":\
+        \ \"Sum\",\n        \"region\": \"eu-central-1\",\n        \"title\": \"Cognito\
+        \ SignIn Metrics\"\n      }\n    },\n    {\n      \"type\": \"metric\",\n\
+        \      \"x\": 12,\n      \"y\": 0,\n      \"width\": 6,\n      \"height\"\
+        : 6,\n      \"properties\": {\n        \"metrics\": [\n          [\n     \
+        \       \"AWS/ApiGateway\", \n            \"Latency\", \n            \"ApiName\"\
+        , \n            \"KwetterAPIGateway\", \n            { \"label\": \"Latency\"\
+        , \"id\": \"latency\" }\n          ],\n          [\n            \"AWS/ApiGateway\"\
+        ,\n            \"IntegrationLatency\", \n            \"ApiName\", \n     \
+        \       \"KwetterAPIGateway\", \n            { \"label\": \"IntegrationLatency\"\
+        , \"id\": \"integrationlatency\" }\n          ]\n        ],\n        \"period\"\
+        : 300,\n        \"stat\": \"Sum\",\n        \"region\": \"eu-central-1\",\n\
+        \        \"title\": \"API gateway Metrics\"\n      }\n    },\n    {\n    \
+        \  \"type\": \"metric\",\n      \"x\": 18,\n      \"y\": 0,\n      \"width\"\
+        : 6,\n      \"height\": 6,\n      \"properties\": {\n        \"metrics\":\
+        \ [\n          [\n            \"AWS/DynamoDB\", \n            \"SuccessfulRequestLatency\"\
+        , \n            \"TableName\", \n            \"KwetterMessagesDynamoDBTable\"\
+        ,\n            \"Operation\",\n            \"Scan\",\n            { \"label\"\
+        : \"SuccessfulRequestLatency\", \"id\": \"successfulrequestlatency\" }\n \
+        \         ],\n          [\n            \"AWS/DynamoDB\", \n            \"\
+        ReturnedItemCount\", \n            \"TableName\", \n            \"KwetterMessagesDynamoDBTable\"\
+        ,\n            \"Operation\",\n            \"Scan\",\n            { \"label\"\
+        : \"ReturnedItemCount\", \"id\": \"returneditemcount\" }\n          ]\n  \
+        \      ],\n        \"period\": 300,\n        \"stat\": \"Sum\",\n        \"\
+        region\": \"eu-central-1\",\n        \"title\": \"DynamoDB messages Metrics\"\
+        \n      }\n    }\n  ]\n}\n"

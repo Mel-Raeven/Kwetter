@@ -243,7 +243,6 @@ Resources:
                       statusCode: '500'
                   requestParameters:
                     integration.request.path.userid: method.request.path.userid
-                  messageContentCheckingFunction
   
   OptionsMethodAuthorization:
     Type: AWS::ApiGateway::GatewayResponse
@@ -384,7 +383,7 @@ Resources:
               "type": "metric",
               "x": 0,
               "y": 0,
-              "width": 12,
+              "width": 6,
               "height": 6,
               "properties": {
                 "metrics": [
@@ -397,6 +396,102 @@ Resources:
                 "region": "eu-central-1",
                 "title": "Lambda Metrics"
               }
+            },
+            {
+              "type": "metric",
+              "x": 6,
+              "y": 0,
+              "width": 6,
+              "height": 6,
+              "properties": {
+                "metrics": [
+                  [
+                    "AWS/Cognito", 
+                    "SignInSuccesses", 
+                    "UserPool", 
+                    "eu-central-1_sDUO5HFwX", 
+                    "UserPoolClient", 
+                    "5vs4anjqtme5f93037vv30fmp0", 
+                    { "label": "SignInSuccesses", "id": "signinsuccesses" }
+                  ],
+                  [
+                    "AWS/Cognito", 
+                    "SignUpSuccesses", 
+                    "UserPool", 
+                    "eu-central-1_sDUO5HFwX", 
+                    "UserPoolClient", 
+                    "5vs4anjqtme5f93037vv30fmp0", 
+                    { "label": "SignUpSuccesses", "id": "signupsuccesses" }
+                  ]
+                ],
+                "period": 300,
+                "stat": "Sum",
+                "region": "eu-central-1",
+                "title": "Cognito SignIn Metrics"
+              }
+            },
+            {
+              "type": "metric",
+              "x": 12,
+              "y": 0,
+              "width": 6,
+              "height": 6,
+              "properties": {
+                "metrics": [
+                  [
+                    "AWS/ApiGateway", 
+                    "Latency", 
+                    "ApiName", 
+                    "KwetterAPIGateway", 
+                    { "label": "Latency", "id": "latency" }
+                  ],
+                  [
+                    "AWS/ApiGateway",
+                    "IntegrationLatency", 
+                    "ApiName", 
+                    "KwetterAPIGateway", 
+                    { "label": "IntegrationLatency", "id": "integrationlatency" }
+                  ]
+                ],
+                "period": 300,
+                "stat": "Sum",
+                "region": "eu-central-1",
+                "title": "API gateway Metrics"
+              }
+            },
+            {
+              "type": "metric",
+              "x": 18,
+              "y": 0,
+              "width": 6,
+              "height": 6,
+              "properties": {
+                "metrics": [
+                  [
+                    "AWS/DynamoDB", 
+                    "SuccessfulRequestLatency", 
+                    "TableName", 
+                    "KwetterMessagesDynamoDBTable",
+                    "Operation",
+                    "Scan",
+                    { "label": "SuccessfulRequestLatency", "id": "successfulrequestlatency" }
+                  ],
+                  [
+                    "AWS/DynamoDB", 
+                    "ReturnedItemCount", 
+                    "TableName", 
+                    "KwetterMessagesDynamoDBTable",
+                    "Operation",
+                    "Scan",
+                    { "label": "ReturnedItemCount", "id": "returneditemcount" }
+                  ]
+                ],
+                "period": 300,
+                "stat": "Sum",
+                "region": "eu-central-1",
+                "title": "DynamoDB messages Metrics"
+              }
             }
           ]
         }
+
