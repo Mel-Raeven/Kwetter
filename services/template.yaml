@@ -175,6 +175,81 @@ Resources:
       ProvisionedThroughput:
         ReadCapacityUnits: 5
         WriteCapacityUnits: 5
+
+
+    # Define the read capacity auto scaling policy
+  ReadCapacityScalableTarget:
+    Type: "AWS::ApplicationAutoScaling::ScalableTarget"
+    Properties:
+      MaxCapacity: 100
+      MinCapacity: 5
+      ResourceId: !Sub "table/${KwetterMessagesDynamoDBTable}"
+      RoleARN: !GetAtt DynamoDBAutoScalingRole.Arn
+      ScalableDimension: "dynamodb:table:ReadCapacityUnits"
+      ServiceNamespace: "dynamodb"
+
+  ReadCapacityScalingPolicy:
+    Type: "AWS::ApplicationAutoScaling::ScalingPolicy"
+    Properties:
+      PolicyName: "ReadCapacityScalingPolicy"
+      PolicyType: "TargetTrackingScaling"
+      ScalingTargetId: !Ref ReadCapacityScalableTarget
+      TargetTrackingScalingPolicyConfiguration:
+        TargetValue: 70.0
+        PredefinedMetricSpecification:
+          PredefinedMetricType: "DynamoDBReadCapacityUtilization"
+        ScaleInCooldown: 60
+        ScaleOutCooldown: 60
+
+  WriteCapacityScalableTarget:
+    Type: "AWS::ApplicationAutoScaling::ScalableTarget"
+    Properties:
+      MaxCapacity: 5000
+      MinCapacity: 5
+      ResourceId: !Sub "table/${KwetterMessagesDynamoDBTable}"
+      RoleARN: !GetAtt DynamoDBAutoScalingRole.Arn
+      ScalableDimension: "dynamodb:table:WriteCapacityUnits"
+      ServiceNamespace: "dynamodb"
+
+  WriteCapacityScalingPolicy:
+    Type: "AWS::ApplicationAutoScaling::ScalingPolicy"
+    Properties:
+      PolicyName: "WriteCapacityScalingPolicy"
+      PolicyType: "TargetTrackingScaling"
+      ScalingTargetId: !Ref WriteCapacityScalableTarget
+      TargetTrackingScalingPolicyConfiguration:
+        TargetValue: 70.0
+        PredefinedMetricSpecification:
+          PredefinedMetricType: "DynamoDBWriteCapacityUtilization"
+        ScaleInCooldown: 0
+        ScaleOutCooldown: 60
+
+  # IAM Role for Auto Scaling
+  DynamoDBAutoScalingRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service: "application-autoscaling.amazonaws.com"
+            Action: "sts:AssumeRole"
+      Policies:
+        - PolicyName: "DynamoDBAutoScalingPolicy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Action:
+                  - "dynamodb:DescribeTable"
+                  - "dynamodb:UpdateTable"
+                  - "cloudwatch:PutMetricAlarm"
+                  - "cloudwatch:DescribeAlarms"
+                  - "cloudwatch:GetMetricStatistics"
+                  - "cloudwatch:SetAlarmState"
+                  - "cloudwatch:DeleteAlarms"
+                Resource: "*"
   
   KwetterAPIGateway:
     Type: AWS::Serverless::Api
