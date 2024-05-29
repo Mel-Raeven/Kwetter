@@ -18,12 +18,13 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+    - name: Change directory to frontend/
+      run: cd frontend/
     - name: Use Node.js ${{ matrix.node-version }}
       uses: actions/setup-node@v3
       with:
         node-version: ${{ matrix.node-version }}
         cache: 'npm'
-        working-directory: frontend/   # Specify the directory where the lock file is located
     - name: Install dependencies and run commands
       run: |
         npm install --no-fund
