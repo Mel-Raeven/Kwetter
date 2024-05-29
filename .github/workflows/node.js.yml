@@ -26,6 +26,6 @@ jobs:
     - name: Install dependencies and run commands in frontend/
       run: |
         cd frontend/
-        npm install
+        npm install --no-fund
         npm run build --if-present
         npx cucumber-js
