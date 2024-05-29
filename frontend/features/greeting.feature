@@ -1,5 +1,7 @@
-Feature: Greeting
+Feature: Post Message
 
-	Scenario: Say hello
-		When the greeter says hello
-		Then I should have heard "hello"
+Scenario: User posts a message
+  Given the user is logged in with a valid ID token
+  When the user posts "Hello, world!"
+  Then the message should be sent
+

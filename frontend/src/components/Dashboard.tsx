@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Container, Button, Textarea, Card, Notification } from "@mantine/core";
+import { postMessage } from "../functions/postMessage.ts"; // Import the postMessage function
 import { jwtDecode } from "jwt-decode";
 
 interface Message {
@@ -27,7 +28,7 @@ function Dashboard() {
 
   const fetchMessages = (lastEvaluatedKey: string | null = null) => {
     const idToken = sessionStorage.getItem("id_token");
-    let apiUrl = `https://0a43x0s4q4.execute-api.eu-central-1.amazonaws.com/Prod/getMessages/${getUserId()}`;
+    let apiUrl = `https://0a43x0s4q4.execute-api.eu-central-1.amazonaws.com/Prod/getMessages/${getUserId(idToken)}`;
 
     if (idToken) {
       const headers: Record<string, string> = {
@@ -49,13 +50,15 @@ function Dashboard() {
             throw new Error("Network response was not ok");
           }
           // Retrieve Last-Evaluated-Key from response headers
-          const lastEvaluatedKeyHeader = response.headers.get('Last-Evaluated-Key');
+          const lastEvaluatedKeyHeader = response.headers.get("Last-Evaluated-Key");
           return response.json().then((data) => ({ data, lastEvaluatedKeyHeader }));
         })
         .then(({ data, lastEvaluatedKeyHeader }) => {
           // Filter out duplicate messages by comparing GUIDs
           const uniqueMessages = data.filter((newMessage: Message) => {
-            return !messages.some((existingMessage) => existingMessage.GUID === newMessage.GUID);
+            return !messages.some(
+              (existingMessage) => existingMessage.GUID === newMessage.GUID
+            );
           });
           setMessages((prevMessages) => [...prevMessages, ...uniqueMessages]);
           // Set the last evaluated key from the response headers
@@ -71,61 +74,30 @@ function Dashboard() {
     }
   };
 
-
-
-
   const handleRefresh = () => {
     fetchMessages();
   };
 
-  const handlePostMessage = () => {
+  const handlePostMessage = async () => {
     const idToken = sessionStorage.getItem("id_token");
-    const apiUrl =
-      "https://0a43x0s4q4.execute-api.eu-central-1.amazonaws.com/Prod/postMessage";
     if (idToken) {
-      const decodedToken = jwtDecode(idToken);
-      console.log(decodedToken.sub);
-      const requestBody = {
-        detail: {
-          Message: message,
-          UserID: decodedToken.sub,
-        },
-      };
-
-      fetch(apiUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `${idToken}`,
-        },
-        body: JSON.stringify(requestBody),
-      })
-        .then((response) => {
-          if (!response.ok) {
-            throw new Error("Network response was not ok");
-          }
-          return response.json();
-        })
-        .then((data) => {
-          console.log("Message posted successfully:", data);
-          setMessage(""); // Clear message input after posting
-          // After posting the message, fetch messages again to update the list
-          fetchMessages();
-          // Show notification
-          setNotificationVisible(true);
-          // Hide notification after 3 seconds
-          setTimeout(() => {
-            setNotificationVisible(false);
-          }, 3000);
-        })
-        .catch((error) => {
-          console.error("There was a problem posting the message:", error);
-        });
+      const response = await postMessage(idToken, message);
+      if (response.success) {
+        setMessage(""); // Clear message input after posting
+        fetchMessages(); // Fetch messages again to update the list
+        // Show notification
+        setNotificationVisible(true);
+        // Hide notification after 3 seconds
+        setTimeout(() => {
+          setNotificationVisible(false);
+        }, 3000);
+      } else {
+        console.error("Failed to post message:", response.error);
+      }
     }
   };
 
-  const getUserId = () => {
-    const idToken = sessionStorage.getItem("id_token");
+  const getUserId = (idToken: string | null) => {
     if (idToken) {
       const decodedToken = jwtDecode(idToken);
       return decodedToken.sub;
@@ -177,7 +149,6 @@ function Dashboard() {
           Your message has been received successfully and is being processed!
         </Notification>
       )}
-      {/* Render "Load More" button if there's a last evaluated key */}
       {lastEvaluatedKey && (
         <Button
           color="cyan"
@@ -192,3 +163,4 @@ function Dashboard() {
 }
 
 export default Dashboard;
+
