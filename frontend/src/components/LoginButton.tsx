@@ -1,7 +1,7 @@
 import React from 'react';
 
 const LoginButton: React.FC = () => {
-  const clientId = '5vs4anjqtme5f93037vv30fmp0';
+  const clientId = '1vnld5vl7tocmecvbkjksmsf2r';
   const redirectUri = encodeURIComponent('http://localhost:5173/auth/callback');
   const cognitoDomain = 'https://kwetter.auth.eu-central-1.amazoncognito.com/oauth2/authorize';
 

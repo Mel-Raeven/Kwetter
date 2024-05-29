@@ -183,7 +183,7 @@ Resources:
             Resource: arn:aws:logs:*:*:*
           - Effect: Allow
             Action:
-            - dynamodb:Scan
+            - dynamodb:Query
             Resource:
             - Fn::GetAtt:
               - KwetterMessagesDynamoDBTable
@@ -193,11 +193,15 @@ Resources:
     Properties:
       TableName: KwetterMessagesDynamoDBTable
       AttributeDefinitions:
+      - AttributeName: UserID
+        AttributeType: S
       - AttributeName: GUID
         AttributeType: S
       KeySchema:
-      - AttributeName: GUID
+      - AttributeName: UserID
         KeyType: HASH
+      - AttributeName: GUID
+        KeyType: RANGE
       ProvisionedThroughput:
         ReadCapacityUnits: 5
         WriteCapacityUnits: 5
@@ -355,6 +359,7 @@ Resources:
         gatewayresponse.header.Access-Control-Allow-Origin: '''*'''
         gatewayresponse.header.Access-Control-Allow-Methods: '''POST,OPTIONS'''
         gatewayresponse.header.Access-Control-Allow-Headers: '''Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'''
+        gatewayresponse.header.Access-Control-Expose-Headers: '''Last-Evaluated-Key'''
       ResponseType: DEFAULT_4XX
       RestApiId:
         Ref: KwetterAPIGateway

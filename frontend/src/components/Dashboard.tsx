@@ -6,12 +6,15 @@ interface Message {
   GUID: string;
   Message: string;
   UserID: string;
+  ts: string;
+  lastEvaluatedKey?: string;
 }
 
 function Dashboard() {
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [notificationVisible, setNotificationVisible] = useState(false);
+  const [lastEvaluatedKey, setLastEvaluatedKey] = useState<string | null>(null);
 
   useEffect(() => {
     fetchMessages();
@@ -22,32 +25,54 @@ function Dashboard() {
     console.log("Logged out");
   };
 
-  const fetchMessages = () => {
+  const fetchMessages = (lastEvaluatedKey: string | null = null) => {
     const idToken = sessionStorage.getItem("id_token");
-    const apiUrl = `https://6xoa9t5ole.execute-api.eu-central-1.amazonaws.com/Prod/getMessages/${getUserId()}`;
+    let apiUrl = `https://0a43x0s4q4.execute-api.eu-central-1.amazonaws.com/Prod/getMessages/${getUserId()}`;
 
     if (idToken) {
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+        Authorization: idToken,
+      };
+
+      // Include the last evaluated key in the request headers if available
+      if (lastEvaluatedKey) {
+        headers["Last-Evaluated-Key"] = lastEvaluatedKey;
+      }
+
       fetch(apiUrl, {
         method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `${idToken}`,
-        },
+        headers: headers,
       })
         .then((response) => {
           if (!response.ok) {
             throw new Error("Network response was not ok");
           }
-          return response.json();
+          // Retrieve Last-Evaluated-Key from response headers
+          const lastEvaluatedKeyHeader = response.headers.get('Last-Evaluated-Key');
+          return response.json().then((data) => ({ data, lastEvaluatedKeyHeader }));
         })
-        .then((data) => {
-          setMessages(data || []);
+        .then(({ data, lastEvaluatedKeyHeader }) => {
+          // Filter out duplicate messages by comparing GUIDs
+          const uniqueMessages = data.filter((newMessage: Message) => {
+            return !messages.some((existingMessage) => existingMessage.GUID === newMessage.GUID);
+          });
+          setMessages((prevMessages) => [...prevMessages, ...uniqueMessages]);
+          // Set the last evaluated key from the response headers
+          if (lastEvaluatedKeyHeader) {
+            setLastEvaluatedKey(lastEvaluatedKeyHeader);
+          } else {
+            setLastEvaluatedKey(null);
+          }
         })
         .catch((error) => {
           console.error("There was a problem fetching messages:", error);
         });
     }
   };
+
+
+
 
   const handleRefresh = () => {
     fetchMessages();
@@ -56,7 +81,7 @@ function Dashboard() {
   const handlePostMessage = () => {
     const idToken = sessionStorage.getItem("id_token");
     const apiUrl =
-      "https://6xoa9t5ole.execute-api.eu-central-1.amazonaws.com/Prod/postMessage";
+      "https://0a43x0s4q4.execute-api.eu-central-1.amazonaws.com/Prod/postMessage";
     if (idToken) {
       const decodedToken = jwtDecode(idToken);
       console.log(decodedToken.sub);
@@ -110,11 +135,7 @@ function Dashboard() {
 
   return (
     <Container size="sm">
-      <Button
-        color="red"
-        onClick={handleLogout}
-        style={{ marginBottom: 16 }}
-      >
+      <Button color="red" onClick={handleLogout} style={{ marginBottom: 16 }}>
         Logout
       </Button>
       <Textarea
@@ -156,9 +177,18 @@ function Dashboard() {
           Your message has been received successfully and is being processed!
         </Notification>
       )}
+      {/* Render "Load More" button if there's a last evaluated key */}
+      {lastEvaluatedKey && (
+        <Button
+          color="cyan"
+          onClick={() => fetchMessages(lastEvaluatedKey)}
+          style={{ marginTop: 16 }}
+        >
+          Load More
+        </Button>
+      )}
     </Container>
   );
 }
 
 export default Dashboard;
-

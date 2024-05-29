@@ -22,7 +22,7 @@ const AuthCallback: React.FC = () => {
 
   const fetchTokens = async (code: string) => {
     try {
-      const clientId = '5vs4anjqtme5f93037vv30fmp0';
+      const clientId = '1vnld5vl7tocmecvbkjksmsf2r';
       const redirectUri = 'http://localhost:5173/auth/callback';
       const tokenUrl = 'https://kwetter.auth.eu-central-1.amazoncognito.com/oauth2/token';
       const body = `grant_type=authorization_code&client_id=${clientId}&code=${code}&redirect_uri=${redirectUri}`;
