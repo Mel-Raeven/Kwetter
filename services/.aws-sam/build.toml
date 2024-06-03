@@ -37,4 +37,28 @@ functions = ["MessageReadFunction"]
 [function_build_definitions.db71358a-9061-4f85-8c0b-551e0d4ec932.metadata]
 BuildMethod = "go1.x"
 
+[function_build_definitions.3cb4bd1e-2f08-4e41-9ae8-ec2b01e52156]
+codeuri = "/home/anon/Repos/Kwetter/services/auth/lambda/ForgetUser"
+runtime = "provided.al2"
+architecture = "arm64"
+handler = "bootstrap"
+manifest_hash = ""
+packagetype = "Zip"
+functions = ["DeleteUserFunction"]
+
+[function_build_definitions.3cb4bd1e-2f08-4e41-9ae8-ec2b01e52156.metadata]
+BuildMethod = "go1.x"
+
+[function_build_definitions.899fa6a7-5139-48d2-ad1e-031361575ee1]
+codeuri = "/home/anon/Repos/Kwetter/services/messages/lambda/messageDeleteBulk"
+runtime = "provided.al2"
+architecture = "arm64"
+handler = "bootstrap"
+manifest_hash = ""
+packagetype = "Zip"
+functions = ["MessageDeleteBulkFunction"]
+
+[function_build_definitions.899fa6a7-5139-48d2-ad1e-031361575ee1.metadata]
+BuildMethod = "go1.x"
+
 [layer_build_definitions]

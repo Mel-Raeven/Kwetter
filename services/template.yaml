@@ -84,6 +84,45 @@ Resources:
                 Action: events:PutEvents
                 Resource: !GetAtt KwetterEventBus.Arn
 
+  DeleteUserFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      CodeUri: auth/lambda/ForgetUser/
+      Handler: bootstrap
+      Runtime: provided.al2
+      Architectures: [arm64]
+      Role: !GetAtt DeleteUserFunctionRole.Arn
+
+  DeleteUserFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: CognitoDeleteUserPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - cognito-idp:AdminDeleteUser
+                  - cognito-idp:GetUser
+                Resource: !GetAtt KwetterUserPool.Arn 
+        - PolicyName: EventBridgePutEventsPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: events:PutEvents
+                Resource: !GetAtt KwetterEventBus.Arn
+
   MessageCreateFunction:
     Type: AWS::Serverless::Function
     Metadata:
@@ -122,6 +161,49 @@ Resources:
             Statement:
               - Effect: Allow
                 Action: dynamodb:PutItem
+                Resource: !GetAtt KwetterMessagesDynamoDBTable.Arn
+
+  MessageDeleteBulkFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      CodeUri: messages/lambda/messageDeleteBulk/
+      Handler: bootstrap
+      Runtime: provided.al2
+      Architectures: [arm64]
+      Role: !GetAtt MessageDeleteBulkFunctionRole.Arn
+
+  MessageDeleteBulkFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: LambdaLoggingPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: arn:aws:logs:*:*:*
+        - PolicyName: DynamoDBWritePolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: 
+                  - 'dynamodb:DeleteItem'
+                  - 'dynamodb:Scan'
+                  - 'dynamodb:BatchWriteItem'
                 Resource: !GetAtt KwetterMessagesDynamoDBTable.Arn
 
   MessageReadFunction:
@@ -446,8 +528,32 @@ Resources:
         - Arn: !GetAtt MessageCreateFunction.Arn
           Id: "MessageCreateFunction"
           RetryPolicy:
-            MaximumRetryAttempts: 1
+            MaximumRetryAttempts: 4
             MaximumEventAgeInSeconds: 60
+          DeadLetterConfig:
+            Arn: !GetAtt KwetterEventBusDLQ.Arn
+
+  messageDeleteBulkEventRulePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt MessageDeleteBulkFunction.Arn
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt messageDeleteBulkFunctionEventRule.Arn
+
+  messageDeleteBulkFunctionEventRule:
+    Type: AWS::Events::Rule
+    Properties:
+      EventBusName: !Ref KwetterEventBus # Replace with your event bus name
+      EventPattern:
+        detail-type:
+          - "DeleteUser" # Replace with your detail type
+      Targets:
+        - Arn: !GetAtt MessageDeleteBulkFunction.Arn
+          Id: "MessageDeleteBulkFunction"
+          RetryPolicy:
+            MaximumRetryAttempts: 4
+            MaximumEventAgeInSeconds: 120
           DeadLetterConfig:
             Arn: !GetAtt KwetterEventBusDLQ.Arn
 

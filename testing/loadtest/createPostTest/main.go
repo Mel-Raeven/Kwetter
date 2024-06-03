@@ -19,17 +19,17 @@ type Post struct {
 
 func main() {
 	url := "https://0a43x0s4q4.execute-api.eu-central-1.amazonaws.com/Prod/postMessage"
-	userID := "136428f2-8051-7099-d7a2-465acc1593bc"
+	userID := "93f45812-4051-706c-61ae-c7078b86e4bb"
 	message := "This is a test post"
 
 	post := Post{Detail: Detail{Message: message, UserID: userID}}
 	postBody, _ := json.Marshal(post)
 	headers := make(map[string][]string)
 	headers["Content-Type"] = []string{"application/json"}
-	headers["Authorization"] = []string{"eyJraWQiOiJMUlZIWjJ6SU9jSkwrSDJmcHhmREg0UHJpbXVJQWdHVUgyM2hqMWpOVVRFPSIsImFsZyI6IlJTMjU2In0.eyJhdF9oYXNoIjoieHRZUzZ0TkoyVkRmVkNZNGxLN1M4ZyIsInN1YiI6IjEzNjQyOGYyLTgwNTEtNzA5OS1kN2EyLTQ2NWFjYzE1OTNiYyIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJpc3MiOiJodHRwczpcL1wvY29nbml0by1pZHAuZXUtY2VudHJhbC0xLmFtYXpvbmF3cy5jb21cL2V1LWNlbnRyYWwtMV9qeERPSTBPOEQiLCJjb2duaXRvOnVzZXJuYW1lIjoiMTM2NDI4ZjItODA1MS03MDk5LWQ3YTItNDY1YWNjMTU5M2JjIiwib3JpZ2luX2p0aSI6IjU2NWVmYmQyLTVlZDItNDgzNS05YzlkLTE1NWZjYTVlMTgzNiIsImF1ZCI6IjF2bmxkNXZsN3RvY21lY3Zia2prc21zZjJyIiwiZXZlbnRfaWQiOiIzOTViNjYxNC03OGZiLTQ3ZWMtYmNiYi1jYTE1MWY3MGVmYzkiLCJ0b2tlbl91c2UiOiJpZCIsImF1dGhfdGltZSI6MTcxNjk5OTc2MiwiZXhwIjoxNzE3MDAzMzYyLCJpYXQiOjE3MTY5OTk3NjIsImp0aSI6ImI4MmUxZGZlLTY0YTgtNGUwZC1hMzE2LTdhZDE0MzA2NzRkZCIsImVtYWlsIjoibWVsLnJhZXZlbkBnbWFpbC5jb20ifQ.Qp7jdSESQS4xcij_6D91roC2q1PPLYCL6HkJvJIj-3penLjQGmoJ7T18W2uSbz9JjolhCL2RVYdcOuY-wskTZZnm6_hYPa0Lk8J3loFkOT92ChBKp4QyXixZfqrRn4t3b1a-S_8tJO_rZFlYqDZ8eImzj-JExD8g9dzDGm5Xrx81jLNGMrjCc-xhcqIojfDpKIZfLzUftWhZo8C56Xys_2QXMuQNnJ_oAYTw9x082lkKaGy7H-QMFOK6HFPPratVFbo5bp4mhqzqpzkS-1ocPlTm1s_ujs-wlUDJcL8szpIi05Xj7iG1ZNSiMPNQA1NmvX28tAgAfgXiDcMTTSh7FA"}
+	headers["Authorization"] = []string{"eyJraWQiOiJMUlZIWjJ6SU9jSkwrSDJmcHhmREg0UHJpbXVJQWdHVUgyM2hqMWpOVVRFPSIsImFsZyI6IlJTMjU2In0.eyJhdF9oYXNoIjoiSmh6bjVNOFBqN2I3LXl6a2ltbVpfZyIsInN1YiI6IjEzNjQyOGYyLTgwNTEtNzA5OS1kN2EyLTQ2NWFjYzE1OTNiYyIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJpc3MiOiJodHRwczpcL1wvY29nbml0by1pZHAuZXUtY2VudHJhbC0xLmFtYXpvbmF3cy5jb21cL2V1LWNlbnRyYWwtMV9qeERPSTBPOEQiLCJjb2duaXRvOnVzZXJuYW1lIjoiMTM2NDI4ZjItODA1MS03MDk5LWQ3YTItNDY1YWNjMTU5M2JjIiwib3JpZ2luX2p0aSI6IjJmZDg2NzQ5LThmZTktNGVmZC04NDNlLWJiZTQ1ZDNjNDdmNyIsImF1ZCI6IjF2bmxkNXZsN3RvY21lY3Zia2prc21zZjJyIiwiZXZlbnRfaWQiOiJhZDBlZjgyOC03OWVhLTQ3ZTItOTcyMi0yNzg5ODc1NjRkZTYiLCJ0b2tlbl91c2UiOiJpZCIsImF1dGhfdGltZSI6MTcxNzQxNzIzNCwiZXhwIjoxNzE3NDIwODM0LCJpYXQiOjE3MTc0MTcyMzQsImp0aSI6IjRjMzY4MDcxLTE1NmQtNGRkNC1hNzQwLTM0OWQ1NDY2MDVlMiIsImVtYWlsIjoibWVsLnJhZXZlbkBnbWFpbC5jb20ifQ.GdRm3Vseoha873CPypbLyy-xTa9BztvoFfQwU3lBGiOCMiRKKDr4gEHKWGyZskNiAh3n4uNrTv0CfnoawB2NnUApvr80ZLG5sAwA5cOA1lFYkcNTzB0Zg_wMFmZ3ZCWRtDtkt7-UJ2sz4mKS7tOCRarcXhOeU2t6pYZR3w_KMx95_An-L5CfkY8z_qf7wZni5g6VlluJ2vjX1s5xT5Mqgpr8in7oO7yd0D1DsCqruk0P8KBdIR28FxnsPyGhKEqoY99DCAqSUetg78XoFP5uWnQcJ_B1ezZTRIl0orAUeiLOhBjPqQN6tHLp1iRX7WlBMG0WlftMAaCNlbjrR9jeTw"}
 
-	rate := vegeta.Rate{Freq: 100, Per: time.Second} // Adjust rate as needed
-	duration := 10 * time.Minute                     // Adjust duration as needed
+	rate := vegeta.Rate{Freq: 50, Per: time.Second} // Adjust rate as needed
+	duration := 1 * time.Minute                     // Adjust duration as needed
 	targeter := vegeta.NewStaticTargeter(vegeta.Target{
 		Method: "POST",
 		URL:    url,
@@ -56,6 +56,7 @@ func main() {
 	}()
 
 	for res := range attacker.Attack(targeter, rate, duration, "CreatePostTest") {
+		// fmt.Printf("Request timestamp: %s\n", time.Now().Format(time.RFC3339))
 		metrics.Add(res)
 	}
 	metrics.Close()

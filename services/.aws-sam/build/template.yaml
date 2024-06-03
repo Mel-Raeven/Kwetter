@@ -99,6 +99,54 @@ Resources:
               Fn::GetAtt:
               - KwetterEventBus
               - Arn
+  DeleteUserFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+      SamResourceId: DeleteUserFunction
+    Properties:
+      CodeUri: DeleteUserFunction
+      Handler: bootstrap
+      Runtime: provided.al2
+      Architectures:
+      - arm64
+      Role:
+        Fn::GetAtt:
+        - DeleteUserFunctionRole
+        - Arn
+  DeleteUserFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: lambda.amazonaws.com
+          Action: sts:AssumeRole
+      Policies:
+      - PolicyName: CognitoDeleteUserPolicy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - cognito-idp:AdminDeleteUser
+            - cognito-idp:GetUser
+            Resource:
+              Fn::GetAtt:
+              - KwetterUserPool
+              - Arn
+      - PolicyName: EventBridgePutEventsPolicy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action: events:PutEvents
+            Resource:
+              Fn::GetAtt:
+              - KwetterEventBus
+              - Arn
   MessageCreateFunction:
     Type: AWS::Serverless::Function
     Metadata:
@@ -141,6 +189,55 @@ Resources:
           Statement:
           - Effect: Allow
             Action: dynamodb:PutItem
+            Resource:
+              Fn::GetAtt:
+              - KwetterMessagesDynamoDBTable
+              - Arn
+  MessageDeleteBulkFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+      SamResourceId: MessageDeleteBulkFunction
+    Properties:
+      CodeUri: MessageDeleteBulkFunction
+      Handler: bootstrap
+      Runtime: provided.al2
+      Architectures:
+      - arm64
+      Role:
+        Fn::GetAtt:
+        - MessageDeleteBulkFunctionRole
+        - Arn
+  MessageDeleteBulkFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: lambda.amazonaws.com
+          Action: sts:AssumeRole
+      Policies:
+      - PolicyName: LambdaLoggingPolicy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            Resource: arn:aws:logs:*:*:*
+      - PolicyName: DynamoDBWritePolicy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - dynamodb:DeleteItem
+            - dynamodb:Scan
+            - dynamodb:BatchWriteItem
             Resource:
               Fn::GetAtt:
               - KwetterMessagesDynamoDBTable
@@ -494,8 +591,43 @@ Resources:
           - Arn
         Id: MessageCreateFunction
         RetryPolicy:
-          MaximumRetryAttempts: 1
+          MaximumRetryAttempts: 4
           MaximumEventAgeInSeconds: 60
+        DeadLetterConfig:
+          Arn:
+            Fn::GetAtt:
+            - KwetterEventBusDLQ
+            - Arn
+  messageDeleteBulkEventRulePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName:
+        Fn::GetAtt:
+        - MessageDeleteBulkFunction
+        - Arn
+      Principal: events.amazonaws.com
+      SourceArn:
+        Fn::GetAtt:
+        - messageDeleteBulkFunctionEventRule
+        - Arn
+  messageDeleteBulkFunctionEventRule:
+    Type: AWS::Events::Rule
+    Properties:
+      EventBusName:
+        Ref: KwetterEventBus
+      EventPattern:
+        detail-type:
+        - DeleteUser
+      Targets:
+      - Arn:
+          Fn::GetAtt:
+          - MessageDeleteBulkFunction
+          - Arn
+        Id: MessageDeleteBulkFunction
+        RetryPolicy:
+          MaximumRetryAttempts: 4
+          MaximumEventAgeInSeconds: 120
         DeadLetterConfig:
           Arn:
             Fn::GetAtt:

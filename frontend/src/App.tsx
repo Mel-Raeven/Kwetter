@@ -5,6 +5,7 @@ import { MantineProvider } from '@mantine/core';
 import LoginButton from './components/LoginButton';
 import AuthCallback from './components/AuthCallback';
 import Dashboard from './components/Dashboard';
+import PrivacyPolicy from './components/PrivacyPolicy';
 
 
 function App() {
@@ -16,6 +17,7 @@ function App() {
           <Route path="/" element={<LoginButton />} />
           <Route path="/auth/callback" element={<AuthCallback />} />
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/privacy" element={<PrivacyPolicy />} />
         </Routes>
       </Router>
     </MantineProvider>
