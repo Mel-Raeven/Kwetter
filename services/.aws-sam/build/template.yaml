@@ -4,11 +4,13 @@ Resources:
   KwetterEventBus:
     Type: AWS::Events::EventBus
     Properties:
-      Name: KwetterEventBus
+      Name:
+        Fn::Sub: ${AWS::StackName}-KwetterEventBus
   KwetterEventBusDLQ:
     Type: AWS::SQS::Queue
     Properties:
-      QueueName: KwetterEventBusDLQ
+      QueueName:
+        Fn::Sub: ${AWS::StackName}-KwetterEventBusDLQ
   KwetterEventBusDLQPolicy:
     Type: AWS::SQS::QueuePolicy
     Properties:
@@ -30,10 +32,11 @@ Resources:
                 Fn::GetAtt:
                 - KwetterEventBus
                 - Arn
-  KwetterEventBusmessageContentCheckingFunctionDLQRule:
+  KwetterEventBusDLQRule:
     Type: AWS::Events::Rule
     Properties:
-      Name: KwetterEventBusmessageContentCheckingFunctionDLQRule
+      Name:
+        Fn::Sub: ${AWS::StackName}-KwetterEventBusDLQRule
       EventBusName:
         Ref: KwetterEventBus
       EventPattern:
@@ -59,6 +62,8 @@ Resources:
       BuildMethod: go1.x
       SamResourceId: messageContentCheckingFunction
     Properties:
+      FunctionName:
+        Fn::Sub: ${AWS::StackName}-MessageContentCheckingFunction
       CodeUri: messageContentCheckingFunction
       Handler: bootstrap
       Runtime: provided.al2
@@ -79,7 +84,8 @@ Resources:
             Service: lambda.amazonaws.com
           Action: sts:AssumeRole
       Policies:
-      - PolicyName: LambdaLoggingPolicy
+      - PolicyName:
+          Fn::Sub: ${AWS::StackName}-LambdaLoggingPolicy
         PolicyDocument:
           Version: '2012-10-17'
           Statement:
@@ -89,7 +95,8 @@ Resources:
             - logs:CreateLogStream
             - logs:PutLogEvents
             Resource: arn:aws:logs:*:*:*
-      - PolicyName: EventBridgePutEventsPolicy
+      - PolicyName:
+          Fn::Sub: ${AWS::StackName}-EventBridgePutEventsPolicy
         PolicyDocument:
           Version: '2012-10-17'
           Statement:
@@ -105,6 +112,8 @@ Resources:
       BuildMethod: go1.x
       SamResourceId: DeleteUserFunction
     Properties:
+      FunctionName:
+        Fn::Sub: ${AWS::StackName}-DeleteUserFunction
       CodeUri: DeleteUserFunction
       Handler: bootstrap
       Runtime: provided.al2
@@ -125,7 +134,8 @@ Resources:
             Service: lambda.amazonaws.com
           Action: sts:AssumeRole
       Policies:
-      - PolicyName: CognitoDeleteUserPolicy
+      - PolicyName:
+          Fn::Sub: ${AWS::StackName}-CognitoDeleteUserPolicy
         PolicyDocument:
           Version: '2012-10-17'
           Statement:
@@ -137,7 +147,8 @@ Resources:
               Fn::GetAtt:
               - KwetterUserPool
               - Arn
-      - PolicyName: EventBridgePutEventsPolicy
+      - PolicyName:
+          Fn::Sub: ${AWS::StackName}-EventBridgePutEventsPolicy
         PolicyDocument:
           Version: '2012-10-17'
           Statement:
@@ -153,6 +164,8 @@ Resources:
       BuildMethod: go1.x
       SamResourceId: MessageCreateFunction
     Properties:
+      FunctionName:
+        Fn::Sub: ${AWS::StackName}-MessageCreateFunction
       CodeUri: MessageCreateFunction
       Handler: bootstrap
       Runtime: provided.al2
@@ -173,7 +186,8 @@ Resources:
             Service: lambda.amazonaws.com
           Action: sts:AssumeRole
       Policies:
-      - PolicyName: LambdaLoggingPolicy
+      - PolicyName:
+          Fn::Sub: ${AWS::StackName}-LambdaLoggingPolicy
         PolicyDocument:
           Version: '2012-10-17'
           Statement:
@@ -183,7 +197,8 @@ Resources:
             - logs:CreateLogStream
             - logs:PutLogEvents
             Resource: arn:aws:logs:*:*:*
-      - PolicyName: DynamoDBWritePolicy
+      - PolicyName:
+          Fn::Sub: ${AWS::StackName}-DynamoDBWritePolicy
         PolicyDocument:
           Version: '2012-10-17'
           Statement:
@@ -199,6 +214,8 @@ Resources:
       BuildMethod: go1.x
       SamResourceId: MessageDeleteBulkFunction
     Properties:
+      FunctionName:
+        Fn::Sub: ${AWS::StackName}-MessageDeleteBulkFunction
       CodeUri: MessageDeleteBulkFunction
       Handler: bootstrap
       Runtime: provided.al2
@@ -219,7 +236,8 @@ Resources:
             Service: lambda.amazonaws.com
           Action: sts:AssumeRole
       Policies:
-      - PolicyName: LambdaLoggingPolicy
+      - PolicyName:
+          Fn::Sub: ${AWS::StackName}-LambdaLoggingPolicy
         PolicyDocument:
           Version: '2012-10-17'
           Statement:
@@ -229,7 +247,8 @@ Resources:
             - logs:CreateLogStream
             - logs:PutLogEvents
             Resource: arn:aws:logs:*:*:*
-      - PolicyName: DynamoDBWritePolicy
+      - PolicyName:
+          Fn::Sub: ${AWS::StackName}-DynamoDBWritePolicy
         PolicyDocument:
           Version: '2012-10-17'
           Statement:
@@ -248,6 +267,8 @@ Resources:
       BuildMethod: go1.x
       SamResourceId: MessageReadFunction
     Properties:
+      FunctionName:
+        Fn::Sub: ${AWS::StackName}-MessageReadFunction
       CodeUri: MessageReadFunction
       Handler: bootstrap
       Runtime: provided.al2
@@ -268,7 +289,8 @@ Resources:
             Service: lambda.amazonaws.com
           Action: sts:AssumeRole
       Policies:
-      - PolicyName: LambdaDynamoDBPolicy
+      - PolicyName:
+          Fn::Sub: ${AWS::StackName}-LambdaDynamoDBPolicy
         PolicyDocument:
           Version: '2012-10-17'
           Statement:
@@ -288,7 +310,8 @@ Resources:
   KwetterMessagesDynamoDBTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: KwetterMessagesDynamoDBTable
+      TableName:
+        Fn::Sub: ${AWS::StackName}-KwetterMessagesDynamoDBTable
       AttributeDefinitions:
       - AttributeName: UserID
         AttributeType: S
@@ -464,7 +487,8 @@ Resources:
   KwetterUserPool:
     Type: AWS::Cognito::UserPool
     Properties:
-      UserPoolName: KwetterUserPool
+      UserPoolName:
+        Fn::Sub: ${AWS::StackName}-KwetterUserPool
       DeletionProtection: ACTIVE
       Policies:
         PasswordPolicy:
@@ -486,13 +510,15 @@ Resources:
     Properties:
       UserPoolId:
         Ref: KwetterUserPool
-      Domain: kwetter
+      Domain:
+        Fn::Sub: ${AWS::StackName}
   KwetterUserPoolClient:
     Type: AWS::Cognito::UserPoolClient
     Properties:
       UserPoolId:
         Ref: KwetterUserPool
-      ClientName: KwetterUserPoolClient
+      ClientName:
+        Fn::Sub: ${AWS::StackName}-KwetterUserPoolClient
       GenerateSecret: false
       AllowedOAuthFlowsUserPoolClient: true
       AllowedOAuthFlows:
@@ -636,7 +662,8 @@ Resources:
   KwetterDashboard:
     Type: AWS::CloudWatch::Dashboard
     Properties:
-      DashboardName: KwetterDashboard
+      DashboardName:
+        Fn::Sub: ${AWS::StackName}-KwetterDashboard
       DashboardBody: "{\n  \"widgets\": [\n    {\n      \"type\": \"metric\",\n  \
         \    \"x\": 0,\n      \"y\": 0,\n      \"width\": 6,\n      \"height\": 6,\n\
         \      \"properties\": {\n        \"metrics\": [\n          [ \"AWS/Lambda\"\
