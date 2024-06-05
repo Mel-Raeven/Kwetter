@@ -29,5 +29,5 @@ jobs:
       - name: build template file
         run: cd services/ && sam build
       - name: deploy to aws stack
-        run: cd services/ && sam deploy --region eu-central-1 --stack-name Kwetter --on-failure ROLLBACK  --no-confirm-changeset --no-fail-on-empty-changeset
+        run: cd services/ && sam deploy --region eu-central-1 --stack-name kwetter-ci --on-failure ROLLBACK  --no-confirm-changeset --no-fail-on-empty-changeset
       
