@@ -1,4 +1,4 @@
-name: AWS CloudFormation Deployment
+name: Integration testing
 
 on:
   push:
