@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/aws/aws-lambda-go/lambda"
@@ -49,8 +50,13 @@ func HandleRequest(ctx context.Context, event *Event) error {
 		"UserID":  &types.AttributeValueMemberS{Value: event.Detail.UserID},
 	}
 
+	tableName := os.Getenv("TABLE_NAME")
+	if tableName == "" {
+		return fmt.Errorf("TABLE_NAME environment variable is not set")
+	}
+
 	input := &dynamodb.PutItemInput{
-		TableName: aws.String("KwetterMessagesDynamoDBTable"),
+		TableName: aws.String(tableName),
 		Item:      item,
 	}
 

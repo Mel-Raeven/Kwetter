@@ -175,6 +175,10 @@ Resources:
         Fn::GetAtt:
         - MessageCreateFunctionRole
         - Arn
+      Environment:
+        Variables:
+          TABLE_NAME:
+            Fn::Sub: ${AWS::StackName}-KwetterMessagesDynamoDBTable
   MessageCreateFunctionRole:
     Type: AWS::IAM::Role
     Properties:
@@ -489,7 +493,6 @@ Resources:
     Properties:
       UserPoolName:
         Fn::Sub: ${AWS::StackName}-KwetterUserPool
-      DeletionProtection: ACTIVE
       Policies:
         PasswordPolicy:
           RequireLowercase: true

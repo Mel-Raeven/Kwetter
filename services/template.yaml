@@ -136,6 +136,9 @@ Resources:
       Runtime: provided.al2
       Architectures: [arm64]
       Role: !GetAtt MessageCreateFunctionRole.Arn
+      Environment:
+        Variables:
+          TABLE_NAME: !Sub "${AWS::StackName}-KwetterMessagesDynamoDBTable"
 
   MessageCreateFunctionRole:
     Type: AWS::IAM::Role
